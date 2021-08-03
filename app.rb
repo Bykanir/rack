@@ -1,26 +1,35 @@
+require_relative 'time_service'
+
 class App
 
   def call(env)
-    perform_request
-    [status, headers, body]
+    @request = Rack::Request.new(env)
+    return error_response unless request_valid?
+
+    @time = TimeService.new(@request.params['format'])
+
+    @time.valid? ? valid_response : invalid_response
   end
 
   private
 
-  def perform_request
-    sleep rand(2..3)
+  def request_valid?
+    @request.get? && @request.path == '/time' && @request.params['format']
   end
 
-  def status
-    200
+  def error_response
+    responce(404, 'Not found')
   end
 
-  def headers
-    { 'Content-Type' => 'text/plain' }
+  def valid_response
+    responce(200, @time.correct_time)
   end
 
-  def body
-    ["Welcome aboard!\n"]
+  def invalid_response
+    responce(400, @time.invalid_formats)
   end
-  
+
+  def responce(status, body)
+    [status, { 'Content-Type' => 'text/plain' }, ["#{body}\n"] ]
+  end
 end
